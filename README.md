@@ -16,6 +16,7 @@ Now type into the terminal
 >```
 $ make
 ```
+
 and you should see something like this
 ![Compiler output](images/compiler_output.PNG)
 
@@ -27,6 +28,7 @@ Now you have to gain root access rights. Do so by typing the command
 >```
 $ su root
 ```
+
 The password for user 'root' is also 'root'. Now move the library to '/usr/lib/' and run 'ldconfig'.
 ![Deploy Tuxono SDK library](images/deploy_tuxono_sdk_library.PNG)
 
