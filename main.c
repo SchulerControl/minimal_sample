@@ -13,10 +13,13 @@ int main(int argc, char *argv[])
 	TUXONO_MEASURE_CONFIG measure_config;
 	TUXONO_EX_DIGOUT_CONFIG ex_digout_config;
 	TUXONO_MEASURE_DATA measure_data;
+	TUXONO_PWM_CONFIG pwm_config;
 	
 	memset(&measure_config, 0, sizeof(TUXONO_MEASURE_CONFIG));
 	memset(&ex_digout_config, 0, sizeof(TUXONO_EX_DIGOUT_CONFIG));
 	memset(&measure_data, 0, sizeof(TUXONO_MEASURE_DATA));
+	memset(&pwm_config, 0, sizeof(TUXONO_PWM_CONFIG));
+	
 	
 	
 	////////////////////////////////////////////////////////////////////
@@ -27,6 +30,7 @@ int main(int argc, char *argv[])
 		printf("Could not init communication! Error code: %d\n", result);
 		return -1;
 	}
+
 
 
 	////////////////////////////////////////////////////////////////////
@@ -53,13 +57,45 @@ int main(int argc, char *argv[])
 	measure_config.ADCSlowGain[1]			= AMPLIFIER_GAIN_1_2;		// Measurement range +- 5 V
 	measure_config.fDacMux16Values[1]		= 1.0;						// Measurement current = voltage * 4 / 1000 ohm (Tuxono S)
 																		// Measurement current = voltage * 1 / 1000 ohm (Tuxono L)
-	
+																		
 	// Store updated configuration
 	if ((result = tuxono_SetMeasureConfig(&measure_config)) != TUXONO_OK) {
 		printf("Could not set measurement configuration! Error code: %d\n", result);
 		tuxono_CloseCommunication();
 		return -1;
 	}
+					
+		
+												
+	////////////////////////////////////////////////////////////////////
+	// Setup PWM output channels
+	////////////////////////////////////////////////////////////////////
+	
+	// Retrieve currently active (default after startup) configuration
+	if ((result = tuxono_GetPWMConfig(&pwm_config)) != TUXONO_OK) {
+		printf("Could not get PWM configuration! Error code: %d\n", result);
+		tuxono_CloseCommunication();
+		return -1;
+	}
+	
+	// Adjust PWM configuration
+	pwm_config.ClockFrequency	= PWM_FREQ_125k;						// Set the clock frequency for all PWM channels
+	pwm_config.usPeriodeClocks	= 3000;									// Set the number of clocks in one PWM period for all channels
+	pwm_config.ucActivePWM		= 0x70;									// Enable PWM out of channels: OUT_OPTO_MOS1, 2 and 3 --> Bits 5, 6 and 7
+	
+	pwm_config.usPWMValue[4]	= 0;									// Set output value: OUT_OPTO_MOS1 PWM off
+	pwm_config.usPWMValue[5]	= pwm_config.usPeriodeClocks / 3;		// Set output value: OUT_OPTO_MOS2 PWM 1/3 high active
+	pwm_config.usPWMValue[6]	= pwm_config.usPeriodeClocks;			// Set output value: OUT_OPTO_MOS3 PWM full on
+	
+		
+	// Store updated configuration
+	if ((result = tuxono_SetPWMConfig(&pwm_config)) != TUXONO_OK) {
+		printf("Could not set PWM configuration! Error code: %d\n", result);
+		tuxono_CloseCommunication();
+		return -1;
+	}
+
+	
 	
 	
 	////////////////////////////////////////////////////////////////////
@@ -83,9 +119,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		
-		// Toggle LED 'Live' and '17' status
-		ex_digout_config.LEDLive = !ex_digout_config.LEDLive;
-		ex_digout_config.LED17 = !ex_digout_config.LED17;
+		// Toggle LED 'Live' and '18' (Tuxono-S LED 6) status
+		ex_digout_config.LEDLive	= !ex_digout_config.LEDLive;
+		ex_digout_config.LED18		= !ex_digout_config.LED18;
 		
 		// Store updated configuration
 		if ((result = tuxono_SetExDigitalOutConfig(&ex_digout_config)) != TUXONO_OK) {
@@ -93,6 +129,7 @@ int main(int argc, char *argv[])
 			tuxono_CloseCommunication();
 			return -1;
 		}
+		
 		
 		
 		////////////////////////////////////////////////////////////////////
@@ -114,7 +151,8 @@ int main(int argc, char *argv[])
 		}
 		
 		
-		// Sleep a bit...
+		
+		// Sleep a bit... (250 ms)
 		nanosleep(&ts, NULL);
 		counter++;
 	} 
